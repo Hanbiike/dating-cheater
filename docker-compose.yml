@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  hanbot:
+    build: .
+    container_name: han_dating_bot
+    restart: unless-stopped
+    
+    environment:
+      - LOG_LEVEL=INFO
+      - ENABLE_METRICS=true
+      
+    env_file:
+      - .env.production
+      
+    volumes:
+      # Данные
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Сессия Telegram
+      - ./han_session.session:/app/han_session.session
+      
+    ports:
+      - "8000:8000"  # Prometheus метрики
+      - "8001:8001"  # Health check
+      
+    networks:
+      - hanbot_network
+      
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        
+    # Лимиты ресурсов
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Мониторинг (опционально)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: han_prometheus
+    restart: unless-stopped
+    
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+      
+    ports:
+      - "9090:9090"
+      
+    networks:
+      - hanbot_network
+      
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: han_grafana
+    restart: unless-stopped
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      
+    ports:
+      - "3000:3000"
+      
+    networks:
+      - hanbot_network
+      
+    profiles:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  hanbot_network:
+    driver: bridge

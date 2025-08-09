@@ -1,0 +1,38 @@
+[Unit]
+Description=Han Dating Bot - Telegram Dating Assistant
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hanbot
+Group=hanbot
+WorkingDirectory=/opt/han-dating-bot
+ExecStart=/opt/han-dating-bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=han-dating-bot
+
+# Environment
+Environment=PYTHONPATH=/opt/han-dating-bot
+Environment=PYTHONUNBUFFERED=1
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/han-dating-bot/data /opt/han-dating-bot/logs
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

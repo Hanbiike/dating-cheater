@@ -1,0 +1,112 @@
+# Переменные окружения и секреты
+.env
+.env.local
+.env.production
+*.env
+
+# Данные пользователей и логи
+conversations/
+backups/
+data/
+logs/
+*.log
+girls_data/
+girls_data.json
+girls_data.json.backup
+metrics.json
+
+# Сессии Telegram
+*.session
+*.session-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+.build/
+*.egg-info/
+.eggs/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+MANIFEST
+
+# Environments  
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Windows
+ehthumbs.db
+Thumbs.db
+
+# Тестирование
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.cache
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter
+.ipynb_checkpoints
+
+# Мониторинг
+monitoring/data/
+*.log
+bot.log
+
+# Telethon session files
+*.session
+*.session-journal
+han_session.session
+
+# IDE
+.vscode/
+.idea/
+
+# Data & backups
+conversations/
+backups/
+
+# Local configs
+.env*
+!/.env.example
+
+# Pytest / coverage (если появятся)
+.pytest_cache/
+.coverage
+htmlcov/
