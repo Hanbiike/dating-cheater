@@ -1,0 +1,36 @@
+# Основные зависимости
+telethon>=1.35.0
+openai>=1.30.0
+aiofiles>=24.1.0
+python-dotenv>=1.0.1
+
+# База данных и интеграция (Phase 1 Database Integration)
+asyncpg>=0.30.0
+sqlalchemy[asyncio]>=2.0.42
+alembic>=1.16.4
+psycopg2-binary>=2.9.9
+
+# Кэширование и производительность
+redis>=6.4.0
+aioredis>=2.0.1
+
+# Мониторинг и производительность
+psutil>=5.9.0
+
+# Multi-Bot Manager зависимости (Phase 2A)
+multiprocessing-logging>=0.3.4
+
+# Phase 2B Enhanced Lifecycle Management зависимости
+statistics>=1.0.3.5  # Для performance_optimizer статистики
+dataclasses>=0.8; python_version < "3.7"  # Dataclasses support для старых версий
+
+# Для продакшена (опционально)
+uvloop>=0.19.0; sys_platform != "win32"
+prometheus-client>=0.19.0
+
+# Разработка и тестирование
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+black>=24.0.0
+isort>=5.12.0
+mypy>=1.8.0
