@@ -15,7 +15,7 @@ from pathlib import Path
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 from telethon.tl.functions.messages import SetTypingRequest
-from telethon.tl.types import SendMessageTypingAction
+from telethon.tl.types import SendMessageTypingAction, PeerUser
 
 from admin import Admin
 from autonomous_manager import AutonomousManager
@@ -198,16 +198,20 @@ async def main() -> None:
         series_buffer: Dict[int, List[str]] = {}
         
         async def resolve_peer(chat_id: int):
-            """Резолв peer с кэшированием."""
+            """Резолв peer с кэшированием и корректной обработкой ошибок."""
             if chat_id in entity_cache:
                 return entity_cache[chat_id]
             try:
                 ent = await client.get_input_entity(chat_id)
-                entity_cache[chat_id] = ent
-                return ent
-            except Exception as e:
-                logger.warning(f"Failed to resolve peer {chat_id}: {e}")
-                return chat_id
+            except ValueError:
+                try:
+                    user = await client.get_entity(PeerUser(chat_id))
+                    ent = await client.get_input_entity(user)
+                except Exception as e:
+                    logger.warning(f"Failed to resolve peer {chat_id}: {e}")
+                    raise TelegramError(f"Unknown chat_id: {chat_id}") from e
+            entity_cache[chat_id] = ent
+            return ent
 
         async def resolve_identity(query: str) -> str:
             """Резолв идентичности пользователя."""
