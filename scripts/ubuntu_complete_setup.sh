@@ -7,28 +7,47 @@ echo "========================================="
 
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
-   echo "❌ Don't run this script as root. Run as regular user with sudo access."
-   exit 1
+   echo "⚠️ Running as root. This is not recommended but will proceed..."
+   echo "🔧 Note: Python packages will be installed system-wide"
+   sleep 3
+   SUDO_CMD=""
+   PIP_CMD="pip3"
+else
+   echo "✅ Running as regular user with sudo access"
+   SUDO_CMD="sudo"
+   PIP_CMD="pip"
 fi
 
 # Update system
 echo "📋 Step 1: Updating package list..."
-sudo apt update
+${SUDO_CMD} apt update
 
 # Install PostgreSQL and Redis
 echo "📦 Step 2: Installing PostgreSQL and Redis..."
-sudo apt install -y postgresql postgresql-contrib redis-server
+${SUDO_CMD} apt install -y postgresql postgresql-contrib redis-server
 
 # Start services
 echo "🔄 Step 3: Starting services..."
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-sudo systemctl start redis-server
-sudo systemctl enable redis-server
+${SUDO_CMD} systemctl start postgresql
+${SUDO_CMD} systemctl enable postgresql
+${SUDO_CMD} systemctl start redis-server
+${SUDO_CMD} systemctl enable redis-server
 
 # Setup PostgreSQL
 echo "🗄️ Step 4: Setting up PostgreSQL databases and user..."
-sudo -u postgres psql << EOF
+if [[ $EUID -eq 0 ]]; then
+    # Running as root - use su to switch to postgres user
+    su - postgres -c "psql << 'EOF'
+CREATE USER bot_user WITH PASSWORD 'bot_password';
+CREATE DATABASE han_dating_bot OWNER bot_user;
+CREATE DATABASE dating_bot OWNER bot_user;
+GRANT ALL PRIVILEGES ON DATABASE han_dating_bot TO bot_user;
+GRANT ALL PRIVILEGES ON DATABASE dating_bot TO bot_user;
+\q
+EOF"
+else
+    # Running as regular user
+    sudo -u postgres psql << EOF
 CREATE USER bot_user WITH PASSWORD 'bot_password';
 CREATE DATABASE han_dating_bot OWNER bot_user;
 CREATE DATABASE dating_bot OWNER bot_user;
@@ -36,27 +55,33 @@ GRANT ALL PRIVILEGES ON DATABASE han_dating_bot TO bot_user;
 GRANT ALL PRIVILEGES ON DATABASE dating_bot TO bot_user;
 \q
 EOF
+fi
 
 # Configure PostgreSQL authentication
 echo "🔐 Step 5: Configuring PostgreSQL authentication..."
-PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP '\d+\.\d+' | head -1)
+if [[ $EUID -eq 0 ]]; then
+    PG_VERSION=$(su - postgres -c "psql -t -c \"SELECT version();\"" | grep -oP '\d+\.\d+' | head -1)
+else
+    PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP '\d+\.\d+' | head -1)
+fi
+
 PG_HBA_FILE="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
 
 # Backup original config
-sudo cp "$PG_HBA_FILE" "$PG_HBA_FILE.backup"
+${SUDO_CMD} cp "$PG_HBA_FILE" "$PG_HBA_FILE.backup"
 
 # Add bot_user authentication line
-if ! sudo grep -q "local.*bot_user.*md5" "$PG_HBA_FILE"; then
-    echo "local   all             bot_user                                md5" | sudo tee -a "$PG_HBA_FILE"
+if ! ${SUDO_CMD} grep -q "local.*bot_user.*md5" "$PG_HBA_FILE"; then
+    echo "local   all             bot_user                                md5" | ${SUDO_CMD} tee -a "$PG_HBA_FILE"
 fi
 
 # Restart PostgreSQL
 echo "🔄 Step 6: Restarting PostgreSQL..."
-sudo systemctl restart postgresql
+${SUDO_CMD} systemctl restart postgresql
 
 # Install Python dependencies
 echo "🐍 Step 7: Installing Python dependencies..."
-pip install asyncpg psycopg2-binary redis aioredis sqlalchemy alembic
+${PIP_CMD} install asyncpg psycopg2-binary redis aioredis sqlalchemy alembic
 
 # Test connections
 echo "🧪 Step 8: Testing connections..."
@@ -82,9 +107,9 @@ fi
 echo ""
 echo "📊 Service Status:"
 echo "=================="
-sudo systemctl status postgresql --no-pager -l
+${SUDO_CMD} systemctl status postgresql --no-pager -l
 echo ""
-sudo systemctl status redis-server --no-pager -l
+${SUDO_CMD} systemctl status redis-server --no-pager -l
 
 echo ""
 echo "🎉 Ubuntu Database Setup Complete!"
