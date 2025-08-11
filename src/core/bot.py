@@ -15,7 +15,7 @@ from pathlib import Path
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 from telethon.tl.functions.messages import SetTypingRequest
-from telethon.tl.types import SendMessageTypingAction
+from telethon.tl.types import SendMessageTypingAction, InputPeerUser, PeerUser
 
 from src.core.admin import Admin
 from src.core.autonomous_manager import AutonomousManager
@@ -231,16 +231,64 @@ async def main(config=None) -> None:
         series_buffer: Dict[int, List[str]] = {}
         
         async def resolve_peer(chat_id: int):
-            """Резолв peer с кэшированием."""
+            """
+            Enhanced entity resolution with multiple fallback strategies.
+            Handles Telethon entity cache misses gracefully.
+            """
+            # Strategy 1: Cache lookup
             if chat_id in entity_cache:
                 return entity_cache[chat_id]
+            
+            # Strategy 2: get_input_entity (primary method)
             try:
-                ent = await client.get_input_entity(chat_id)
-                entity_cache[chat_id] = ent
-                return ent
+                entity = await client.get_input_entity(chat_id)
+                entity_cache[chat_id] = entity
+                logger.debug(f"Entity resolved via get_input_entity for {chat_id}")
+                return entity
+            except ValueError as e:
+                logger.debug(f"get_input_entity failed for {chat_id}: {e}")
+                
+                # Strategy 3: get_entity + manual InputPeerUser creation
+                try:
+                    entity = await client.get_entity(chat_id)
+                    if hasattr(entity, 'access_hash') and entity.access_hash:
+                        input_entity = InputPeerUser(entity.id, entity.access_hash)
+                        entity_cache[chat_id] = input_entity
+                        logger.debug(f"Entity resolved via get_entity + InputPeerUser for {chat_id}")
+                        return input_entity
+                except Exception as e2:
+                    logger.debug(f"get_entity strategy failed for {chat_id}: {e2}")
+                
+                # Strategy 4: Dialog iteration (for admin/known contacts)
+                try:
+                    async for dialog in client.iter_dialogs():
+                        if hasattr(dialog.entity, 'id') and dialog.entity.id == chat_id:
+                            entity_cache[chat_id] = dialog.input_entity
+                            logger.info(f"Entity resolved via dialog iteration for {chat_id}")
+                            return dialog.input_entity
+                except Exception as e3:
+                    logger.debug(f"Dialog iteration failed for {chat_id}: {e3}")
+            
             except Exception as e:
-                logger.warning(f"Failed to resolve peer {chat_id}: {e}")
-                return chat_id
+                logger.warning(f"Unexpected error in entity resolution for {chat_id}: {e}")
+            
+            # Strategy 5: PeerUser fallback
+            logger.warning(f"Using PeerUser fallback for {chat_id} - may not work for all operations")
+            return PeerUser(chat_id)
+
+        async def warm_admin_entities():
+            """
+            Pre-load critical admin entities for reliable messaging.
+            Called after successful Telegram connection.
+            """
+            admin_ids = [ADMIN_CHAT_ID]
+            
+            for admin_id in admin_ids:
+                try:
+                    await resolve_peer(admin_id)
+                    logger.info(f"✅ Admin entity {admin_id} pre-loaded successfully")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to pre-load admin entity {admin_id}: {e}")
 
         async def resolve_identity(query: str) -> str:
             """Резолв идентичности пользователя."""
@@ -266,21 +314,36 @@ async def main(config=None) -> None:
                 return f"Ошибка поиска: {str(e)}"
 
         async def send_message(chat_id: int, text: str) -> None:
-            """Отправка сообщения с обработкой ошибок."""
+            """Отправка сообщения с улучшенной обработкой ошибок."""
             try:
                 chat_id = Validator.validate_chat_id(chat_id)
                 text = Validator.validate_message_text(text)
                 
+                # Enhanced entity resolution with detailed logging
                 peer = await resolve_peer(chat_id)
+                logger.debug(f"Resolved peer for {chat_id}: {type(peer).__name__}")
+                
                 await client.send_message(peer, text)
                 
                 metrics_collector.increment_messages_sent()
                 await append_conversation(chat_id, {"direction": "out", "text": text})
-                logger.debug(f"Sent message to {chat_id}: {text[:50]}...")
+                logger.debug(f"Successfully sent message to {chat_id}: {text[:50]}...")
                 
             except Exception as e:
-                handle_exception(e, "send_message", chat_id=chat_id, text_length=len(text))
-                raise TelegramError(f"Failed to send message: {str(e)}")
+                # Enhanced error context
+                error_context = {
+                    "chat_id": chat_id, 
+                    "text_length": len(text) if text else 0,
+                    "entity_cached": chat_id in entity_cache,
+                    "entity_type": type(entity_cache.get(chat_id)).__name__ if chat_id in entity_cache else "None"
+                }
+                
+                # Log specific error details for troubleshooting
+                if "Could not find the input entity" in str(e):
+                    logger.error(f"Entity resolution failed for chat_id {chat_id}. Consider clearing session or checking user accessibility.")
+                
+                handle_exception(e, "send_message", **error_context)
+                raise TelegramError(f"Failed to send message to {chat_id}: {str(e)}")
 
         async def send_typing(chat_id: int, seconds: int) -> None:
             """Отправка индикатора набора."""
@@ -307,6 +370,10 @@ async def main(config=None) -> None:
         metrics_collector.set_telegram_status(True)
         metrics_collector.set_openai_status(bool(rg._client))
         logger.info("Успешное подключение к Telegram")
+
+        # Pre-load admin entities to prevent resolution errors
+        logger.info("🔄 Pre-loading admin entities...")
+        await warm_admin_entities()
 
         # Обработчик входящих сообщений
         @client.on(events.NewMessage(incoming=True))
