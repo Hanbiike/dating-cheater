@@ -69,14 +69,21 @@ OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.85"))
 OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "240"))
 
 # Telegram / Telethon
-TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0"))
+try:
+    TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0") or "0")
+except ValueError:
+    TELEGRAM_API_ID = 0
+    
 TELEGRAM_API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 TELEGRAM_PHONE = os.getenv("TELEGRAM_PHONE", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")  # For bot API if needed
 SESSION_NAME = os.getenv("SESSION_NAME", "han_session")
 
 # Админ
-ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0"))
+try:
+    ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "0") or "0")
+except ValueError:
+    ADMIN_CHAT_ID = 0
 ADMIN_BOT_API_KEY = os.getenv("ADMIN_BOT_API_KEY", "")
 
 # Database Configuration

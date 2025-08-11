@@ -120,55 +120,72 @@ Examples:
             raise
     
     def _create_minimal_config(self) -> Config:
-        """Создание минимальной конфигурации для тестирования"""
-        from src.config.config import TimeWindows, Probabilities, Delays, TelegramConfig, DatabaseConfig
+        """Создание конфигурации из переменных окружения"""
+        from src.config.config import Config
         
-        # Create minimal configuration objects
-        time_windows = TimeWindows()
-        probabilities = Probabilities()
-        delays = Delays()
-        
-        telegram_config = TelegramConfig(
-            api_id=12345,  # Placeholder
-            api_hash="placeholder",
-            phone="+1234567890",
-            bot_token="placeholder"
-        )
-        
-        database_config = DatabaseConfig(
-            host="localhost",
-            port=5432,
-            database="hanbot",
-            username="bot_user",
-            password="placeholder"
-        )
-        
-        # Create main config with all required fields
-        config = Config(
-            telegram=telegram_config,
-            database=database_config,
-            time_windows=time_windows,
-            probabilities=probabilities,
-            delays=delays,
-            openai_api_key="placeholder",
-            openai_model="gpt-4",
-            openai_temperature=0.7,
-            openai_max_tokens=1000,
-            admin_chat_id=123456789,
-            admin_bot_api_key="placeholder",
-            multi_bot_enabled=False,
-            current_bot_id="default",
-            girls_data_path=Path("girls_data"),
-            conversations_dir=Path("conversations"),
-            backups_dir=Path("backups"),
-            log_file=Path("bot.log"),
-            log_level="INFO",
-            history_limit=50,
-            profile_analyze_every_n=10,
-            wait_for_more_seconds=300
-        )
-        
-        return config
+        # Use the from_env class method to create proper configuration
+        try:
+            config = Config.from_env()
+            self.logger.info("Configuration loaded from environment variables")
+            return config
+        except Exception as e:
+            self.logger.warning(f"Failed to load from environment: {e}")
+            
+            # Fallback to minimal config for testing
+            from src.config.config import TimeWindows, Probabilities, Delays, TelegramConfig, DatabaseConfig
+            
+            # Create minimal configuration objects
+            time_windows = TimeWindows()
+            probabilities = Probabilities()
+            delays = Delays()
+            
+            telegram_config = TelegramConfig(
+                api_id=12345,  # Placeholder
+                api_hash="placeholder",
+                phone="+1234567890",
+                bot_token="placeholder",
+                session_name="test_session"
+            )
+            
+            database_config = DatabaseConfig(
+                url="postgresql://bot_user:placeholder@localhost:5432/hanbot",
+                host="localhost",
+                port=5432,
+                name="hanbot",
+                user="bot_user",
+                password="placeholder",
+                ssl_mode="prefer",
+                multi_bot_enabled=False,
+                current_bot_id="test_bot"
+            )
+            
+            # Create main config with all required fields
+            config = Config(
+                telegram=telegram_config,
+                database=database_config,
+                time_windows=time_windows,
+                probabilities=probabilities,
+                delays=delays,
+                openai_api_key="placeholder",
+                openai_model="gpt-4",
+                openai_temperature=0.7,
+                openai_max_tokens=1000,
+                admin_chat_id=123456789,
+                admin_bot_api_key="placeholder",
+                multi_bot_enabled=False,
+                current_bot_id="default",
+                girls_data_path=Path("girls_data"),
+                conversations_dir=Path("conversations"),
+                backups_dir=Path("backups"),
+                log_file=Path("bot.log"),
+                log_level="INFO",
+                history_limit=50,
+                profile_analyze_every_n=10,
+                wait_for_more_seconds=300
+            )
+            
+            self.logger.info("Using fallback minimal configuration")
+            return config
     
     def detect_mode(self) -> str:
         """Определение режима работы на основе конфигурации"""
@@ -236,14 +253,24 @@ Examples:
         try:
             self.logger.info("Starting in single-bot mode")
             
-            # Import legacy main function
-            # This would normally import the existing main() function
-            self.logger.info("Single-bot mode would start here")
-            self.logger.info("Legacy main.py functionality would be executed")
-            
-            # For now, just simulate
-            await asyncio.sleep(1)
-            self.logger.info("Single-bot mode simulation completed")
+            # Import and run the actual bot functionality
+            try:
+                from src.core.bot import main as bot_main
+                self.logger.info("Importing legacy bot main function")
+                self.logger.info("Starting bot polling...")
+                
+                # Run the actual bot
+                await bot_main()
+                
+            except ImportError as e:
+                self.logger.error(f"Failed to import legacy bot main: {e}")
+                self.logger.info("Falling back to simulation mode")
+                
+                # Fallback simulation
+                self.logger.info("Single-bot mode would start here")
+                self.logger.info("Legacy main.py functionality would be executed")
+                await asyncio.sleep(1)
+                self.logger.info("Single-bot mode simulation completed")
             
             return 0
             

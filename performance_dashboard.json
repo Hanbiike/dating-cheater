@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-08-11T00:40:08.288350",
+  "status": "warning",
+  "metrics_summary": {
+    "cpu_usage_percent": {
+      "current": 7.3,
+      "trend": "unknown"
+    },
+    "memory_usage_percent": {
+      "current": 80.4,
+      "trend": "unknown"
+    }
+  },
+  "active_alerts": [
+    {
+      "alert_id": "memory_usage_percent_warning",
+      "severity": "warning",
+      "title": "Memory Usage Percent WARNING",
+      "description": "memory_usage_percent is 80.40, threshold is 80.00",
+      "metric_name": "memory_usage_percent",
+      "threshold": 80.0,
+      "current_value": 80.4,
+      "timestamp": 1754851208.287565,
+      "acknowledged": false
+    }
+  ],
+  "performance_trends": {},
+  "recommendations": []
+}

@@ -59,23 +59,22 @@ class DatabaseConfig:
     def _load_from_config(self):
         """Load database settings from main config"""
         try:
-            config = Config()
+            config = Config.from_env()
             
             # Load basic connection settings
-            if hasattr(config, 'DATABASE_HOST'):
-                self.host = config.DATABASE_HOST
-            if hasattr(config, 'DATABASE_PORT'):
-                self.port = int(config.DATABASE_PORT)
-            if hasattr(config, 'DATABASE_NAME'):
-                self.database = config.DATABASE_NAME
-            if hasattr(config, 'DATABASE_USER'):
-                self.username = config.DATABASE_USER
-            if hasattr(config, 'DATABASE_PASSWORD'):
-                self.password = config.DATABASE_PASSWORD
+            if hasattr(config.database, 'host'):
+                self.host = config.database.host
+            if hasattr(config.database, 'port'):
+                self.port = int(config.database.port)
+            if hasattr(config.database, 'name'):
+                self.database = config.database.name
+            if hasattr(config.database, 'user'):
+                self.username = config.database.user
+            if hasattr(config.database, 'password'):
+                self.password = config.database.password
                 
-            # Load environment
-            if hasattr(config, 'ENVIRONMENT'):
-                self.environment = config.ENVIRONMENT
+            # Load environment info if available
+            # Note: Environment is not part of standard config, use environment variable instead
                 
         except Exception as e:
             print(f"Warning: Could not load database config from main config: {e}")

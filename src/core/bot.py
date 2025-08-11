@@ -19,15 +19,7 @@ from telethon.tl.types import SendMessageTypingAction
 
 from src.core.admin import Admin
 from src.core.autonomous_manager import AutonomousManager
-from src.config.config import (
-    ADMIN_CHAT_ID,
-    DELAYS,
-    SESSION_NAME,
-    TELEGRAM_API_HASH,
-    TELEGRAM_API_ID,
-    TELEGRAM_PHONE,
-    WAIT_FOR_MORE_SECONDS,
-)
+from src.config.config import DELAYS, WAIT_FOR_MORE_SECONDS
 from src.core.girls_manager import GirlsManager
 from src.utils.logger import append_conversation, setup_logging
 from src.core.response_generator import ResponseGenerator
@@ -166,10 +158,26 @@ async def run_backup_loop(girls: GirlsManager, shutdown: Shutdown) -> None:
         await asyncio.sleep(60 * 60 * 24)
 
 
-async def main() -> None:
-    """Главная функция с улучшенной обработкой ошибок и мониторингом."""
+async def main(config=None) -> None:
+    """Главная функция с улучшенной обработкой ошибок и мониторингом.
+    
+    Args:
+        config: Configuration object. If None, will load from environment.
+    """
     setup_logging()
     logger.info("Запуск Han Dating Bot...")
+    
+    # Load configuration if not provided
+    if config is None:
+        from src.config.config import Config
+        config = Config.from_env()
+    
+    # Import configuration values
+    ADMIN_CHAT_ID = config.admin_chat_id
+    SESSION_NAME = config.telegram.session_name
+    TELEGRAM_API_ID = config.telegram.api_id
+    TELEGRAM_API_HASH = config.telegram.api_hash
+    TELEGRAM_PHONE = config.telegram.phone
     
     # Импорт метрик после настройки логирования
     from src.utils.metrics import metrics_collector

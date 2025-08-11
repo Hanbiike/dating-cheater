@@ -451,16 +451,16 @@ async def create_database_store(bot_id: str = "default") -> HybridDataStore:
     Factory function to create and initialize database store
     with proper configuration and connection management
     """
-    config = Config()
+    config = Config.from_env()
     
     # Initialize database configuration
     db_config = DatabaseConfig(
-        host=getattr(config, 'DATABASE_HOST', 'localhost'),
-        port=getattr(config, 'DATABASE_PORT', 5432),
-        database=getattr(config, 'DATABASE_NAME', 'dating_bot'),
-        username=getattr(config, 'DATABASE_USER', 'bot_user'),
-        password=getattr(config, 'DATABASE_PASSWORD', ''),
-        max_connections=getattr(config, 'DATABASE_MAX_CONNECTIONS', 20)
+        host=getattr(config.database, 'host', 'localhost'),
+        port=getattr(config.database, 'port', 5432),
+        database=getattr(config.database, 'name', 'dating_bot'),
+        username=getattr(config.database, 'user', 'bot_user'),
+        password=getattr(config.database, 'password', ''),
+        max_connections=20  # Default max connections
     )
     
     # Create connection manager
